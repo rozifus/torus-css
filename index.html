@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+        <title>three.js css3d - periodic table</title>
+        <style>
+            html, body {
+                height: 100%;
+            }
+
+            body {
+                background-color: #000000;
+                margin: 0;
+                font-family: Helvetica, sans-serif;;
+                overflow: hidden;
+            }
+
+            a {
+                color: #ffffff;
+            }
+
+            #info {
+                position: absolute;
+                width: 100%;
+                color: #ffffff;
+                padding: 5px;
+                font-family: Monospace;
+                font-size: 13px;
+                font-weight: bold;
+                text-align: center;
+                z-index: 1;
+            }
+
+            #menu {
+                position: absolute;
+                bottom: 20px;
+                width: 100%;
+                text-align: center;
+            }
+
+            .element {
+                width: 200px;
+                height: 100px;
+                box-shadow: 0px 0px 12px rgba(0,255,255,0.5);
+                border: 1px solid rgba(127,255,255,0.25);
+                text-align: center;
+                cursor: default;
+            }
+
+            .element:hover {
+                box-shadow: 0px 0px 12px rgba(0,255,255,0.75);
+                border: 1px solid rgba(127,255,255,0.75);
+            }
+
+            .element .symbol {
+                position: absolute;
+                top: 20px;
+                left: 0px;
+                right: 0px;
+                font-size: 60px;
+                font-weight: bold;
+                color: rgba(255,255,255,0.75);
+                text-shadow: 0 0 10px rgba(0,255,255,0.95);
+            }
+
+            button {
+                color: rgba(127,255,255,0.75);
+                background: transparent;
+                outline: 1px solid rgba(127,255,255,0.75);
+                border: 0px;
+                padding: 5px 10px;
+                cursor: pointer;
+            }
+            button:hover {
+                background-color: rgba(0,255,255,0.5);
+            }
+            button:active {
+                color: #000000;
+                background-color: rgba(0,255,255,0.75);
+            }
+        </style>
+    </head>
+    <body>
+        <script src="js/three.min.js"></script>
+        <script src="js/tween.min.js"></script>
+        <script src="js/TrackballControls.js"></script>
+        <script src="js/CSS3DRenderer.js"></script>
+
+        <div id="container"></div>
+        <div id="info"><a href="http://threejs.org" target="_blank">three.js css3d</a> - periodic table. <a href="https://plus.google.com/113862800338869870683/posts/QcFk5HrWran" target="_blank">info</a>.</div>
+
+        <script>
+
+            var camera, scene, renderer;
+            var controls;
+
+            var objects = [];
+            var targets = { table: [], sphere: [], helix: [], grid: [], torus: [] };
+
+            var xCount = 16, yCount = 16;
+
+            init();
+            animate();
+
+            function init() {
+
+                camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 10000 );
+                camera.position.z = 3000;
+
+                scene = new THREE.Scene();
+
+                // css elements
+
+                for ( var i = 0; i < xCount; i++ ) {
+
+                    for ( var j = 0; j < yCount; j++ ) {
+
+                        var element = document.createElement( 'div' );
+                        element.className = 'element';
+                        element.style.backgroundColor = 'rgba(0,127,127,' + ( Math.random() * 0.5 + 0.25 ) + ')';
+
+                        var symbol = document.createElement( 'div' );
+                        symbol.className = 'symbol';
+                        symbol.textContent = i + ',' + j;
+                        element.appendChild( symbol );
+
+                        var object = new THREE.CSS3DObject( element );
+                        scene.add( object );
+
+                        objects.push( object );
+
+                    }
+                }
+
+                // torus
+
+                var radialSegments  = xCount,
+                    tubularSegments = yCount,
+                    radius          = 800,
+                    tube            = 400,
+                    arc             = Math.PI * 2;
+
+                var center = new THREE.Vector3();
+
+                for ( var j = 0; j < radialSegments; j ++ ) {
+
+                    for ( var i = 0; i < tubularSegments; i ++ ) {
+
+                        var u = i / tubularSegments * arc;
+                        var v = j / radialSegments * Math.PI * 2;
+
+                        center.x = radius * Math.cos( u );
+                        center.y = radius * Math.sin( u );
+
+                        var object = objects[i*radialSegments + j];
+                        object.position.x = ( radius + tube * Math.cos( v ) ) * Math.cos( u );
+                        object.position.y = ( radius + tube * Math.cos( v ) ) * Math.sin( u );
+                        object.position.z = tube * Math.sin( v );
+
+                        var normal = object.position.clone().sub( center ).normalize();
+                        var target = new THREE.Vector3().addVectors(object.position, normal);
+
+                        object.lookAt(target);
+
+                    }
+
+                }
+
+                //
+
+                renderer = new THREE.CSS3DRenderer();
+                renderer.setSize( window.innerWidth, window.innerHeight );
+                renderer.domElement.style.position = 'absolute';
+                document.getElementById( 'container' ).appendChild( renderer.domElement );
+
+                //
+
+                controls = new THREE.TrackballControls( camera, renderer.domElement );
+                controls.rotateSpeed = 0.5;
+                controls.minDistance = 500;
+                controls.maxDistance = 6000;
+                controls.addEventListener( 'change', render );
+
+                window.addEventListener( 'resize', onWindowResize, false );
+
+                render();
+
+            }
+
+            function onWindowResize() {
+
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+
+                renderer.setSize( window.innerWidth, window.innerHeight );
+
+                render();
+
+            }
+
+            function animate() {
+
+                requestAnimationFrame( animate );
+
+                TWEEN.update();
+
+                controls.update();
+
+            }
+
+            function render() {
+
+                renderer.render( scene, camera );
+
+            }
+
+        </script>
+    </body>
+</html>
